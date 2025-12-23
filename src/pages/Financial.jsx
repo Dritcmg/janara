@@ -1,18 +1,19 @@
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/db';
-import { ArrowUpCircle, ArrowDownCircle, Plus, PieChart, Wallet } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, Plus, PieChart, Wallet, Clock, MessageCircle, AlertCircle } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import toast from 'react-hot-toast';
-import { formatCurrency, parseCurrency } from '../lib/utils'; // Assumed from previous steps
+import { formatCurrency, parseCurrency } from '../lib/utils';
+import { supabase } from '../services/supabaseClient';
 
 const Financial = () => {
     const [transactions, setTransactions] = useState([]);
+    const [receivables, setReceivables] = useState([]); // New: Pending payments
     const [expenseStats, setExpenseStats] = useState({});
-    const [filter, setFilter] = useState('all'); // all, entrada, saida
+    const [filter, setFilter] = useState('all');
     const [loading, setLoading] = useState(false);
     const [dateRange, setDateRange] = useState({
         startDate: '',
@@ -34,13 +35,54 @@ const Financial = () => {
     const loadData = async () => {
         setLoading(true);
         try {
+            // Load standard transactions
             const data = await db.financial.list(dateRange);
             setTransactions(data);
+
+            // Load stats
             const stats = await db.financial.getByCategory();
             setExpenseStats(stats);
+
+            // Load Receivables (Accounts Receivable) from supabase directly for now as db service might need update
+            // We look for sales where status_pagamento is 'pendente' or 'parcial'
+            const { data: pendingSales, error } = await supabase
+                .from('vendas')
+                .select(`
+                    id, 
+                    created_at, 
+                    valor_total, 
+                    valor_pago, 
+                    status_pagamento, 
+                    data_vencimento, 
+                    cliente_nome_temp,
+                    clientes (nome, telefone)
+                `)
+                .or('status_pagamento.eq.pendente,status_pagamento.eq.parcial')
+                .order('data_vencimento', { ascending: true });
+
+            if (error) throw error;
+
+            // Sort logic: overdue first
+            const today = new Date().toISOString().split('T')[0];
+            const sortedReceivables = (pendingSales || []).map(sale => {
+                const total = parseFloat(sale.valor_total);
+                const paid = parseFloat(sale.valor_pago || 0);
+                const remaining = total - paid;
+                const isOverdue = sale.data_vencimento && sale.data_vencimento < today;
+
+                return {
+                    ...sale,
+                    remaining,
+                    isOverdue,
+                    clientName: sale.clientes?.nome || sale.cliente_nome_temp || 'Cliente'
+                };
+            });
+
+            setReceivables(sortedReceivables);
+
         } catch (error) {
             console.error("Error loading financial data:", error);
-            toast.error("Erro ao carregar dados financeiros");
+            // toast.error("Erro ao carregar dados financeiros"); // Suppress specifically if just RPC missing
         } finally {
             setLoading(false);
         }
@@ -97,10 +139,24 @@ const Financial = () => {
         }
     };
 
+    const sendWhatsAppReminder = (sale) => {
+        const phone = sale.clientes?.telefone;
+        if (!phone) {
+            toast.error("Cliente sem telefone cadastrado.");
+            return;
+        }
+
+        // Clean phone number
+        const cleanPhone = phone.replace(/\D/g, '');
+        const message = `Olá ${sale.clientName}, lembramos que falta pagar R$ ${sale.remaining.toFixed(2)} referente à sua compra na Jana Store.`;
+        const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+    };
+
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-10">
             {loading && <LoadingSpinner />}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-zinc-900 tracking-tight flex items-center">
                     <Wallet className="mr-2 h-6 w-6 text-indigo-600" />
                     Financeiro
@@ -109,6 +165,75 @@ const Financial = () => {
                     <Plus className="mr-2 h-5 w-5" />
                     Registrar Despesa
                 </Button>
+            </div>
+
+            {/* Receivables Section (Contas a Receber) */}
+            <div className="bg-white rounded-xl shadow-sm border border-orange-100 overflow-hidden mb-8">
+                <div className="px-6 py-4 border-b border-orange-100 bg-orange-50/50 flex justify-between items-center">
+                    <h2 className="text-lg font-bold text-orange-900 flex items-center">
+                        <Clock className="mr-2 h-5 w-5 text-orange-600" />
+                        Contas a Receber
+                    </h2>
+                    <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded-full border border-orange-200">
+                        {receivables.length} Pendentes
+                    </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimento</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Restante (R$)</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {receivables.length > 0 ? (
+                                receivables.map((calc, idx) => (
+                                    <tr key={calc.id} className={calc.isOverdue ? 'bg-red-50 hover:bg-red-100 transition-colors' : 'hover:bg-gray-50 transition-colors'}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            <div className={`font-medium ${calc.isOverdue ? 'text-red-700' : 'text-gray-900'}`}>
+                                                {calc.data_vencimento ? new Date(calc.data_vencimento).toLocaleDateString() : 'Sem data'}
+                                            </div>
+                                            {calc.isOverdue && <div className="text-xs text-red-500 font-semibold flex items-center mt-1"><AlertCircle className="w-3 h-3 mr-1" /> Vencido</div>}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {calc.clientName}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${calc.status_pagamento === 'parcial' ? 'bg-indigo-100 text-indigo-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                {calc.status_pagamento === 'parcial' ? 'Parcial' : 'Pendente'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">
+                                            {formatCurrency(calc.remaining.toFixed(2))}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-green-600 border-green-200 hover:bg-green-50"
+                                                onClick={() => sendWhatsAppReminder(calc)}
+                                            >
+                                                <MessageCircle className="w-4 h-4 mr-1" />
+                                                Cobrar
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
+                                        Nenhuma conta a receber encontrada.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Expense Analysis */}

@@ -125,7 +125,7 @@ const Dashboard = () => {
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                         <TrendingUp className="h-5 w-5 mr-2 text-indigo-500" /> Vendas - Últimos 7 Dias
                     </h3>
-                    <div className="h-72 w-full">
+                    <div className="h-72 w-full" style={{ minHeight: '300px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={salesSevenDays}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -143,7 +143,7 @@ const Dashboard = () => {
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                         <PieIcon className="h-5 w-5 mr-2 text-indigo-500" /> Métodos de Pagamento
                     </h3>
-                    <div className="h-72 w-full">
+                    <div className="h-72 w-full" style={{ minHeight: '300px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -172,7 +172,7 @@ const Dashboard = () => {
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                         <PieIcon className="h-5 w-5 mr-2 text-indigo-500" /> Vendas por Categoria (Quantidade)
                     </h3>
-                    <div className="h-64 w-full">
+                    <div className="h-64 w-full" style={{ minHeight: '256px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={salesByCategory} >
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />

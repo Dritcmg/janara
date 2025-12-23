@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../lib/utils';
-import { Search, ShoppingCart, Trash, Plus, Minus, Printer, Check, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ShoppingCart, Trash, Plus, Minus, Printer, Check, User, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import jsPDF from 'jspdf';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -17,12 +16,18 @@ const Sales = () => {
         const savedCart = localStorage.getItem('janara_cart');
         return savedCart ? JSON.parse(savedCart) : [];
     });
+
+    // Checkout States
     const [paymentMethod, setPaymentMethod] = useState('dinheiro');
     const [selectedClientId, setSelectedClientId] = useState('');
+    const [amountPaid, setAmountPaid] = useState(''); // New: Amount user actually pays now
+    const [dueDate, setDueDate] = useState(''); // New: Due date for remaining balance
+
+    // UI States
     const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [lastSale, setLastSale] = useState(null);
-    const [discount, setDiscount] = useState(0); // Value in R$
-    const [discountType, setDiscountType] = useState('value'); // 'value' or 'percent'
+    const [discount, setDiscount] = useState(0);
+    const [discountType, setDiscountType] = useState('value');
     const [loading, setLoading] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -30,7 +35,7 @@ const Sales = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    const limit = 12; // 12 items per page for grid (3x4 or 4x3)
+    const limit = 12;
 
     const loadProducts = async () => {
         setLoading(true);
@@ -48,11 +53,9 @@ const Sales = () => {
     };
 
     useEffect(() => {
-        // Load clients once
         db.clients.list().then(data => setClients(Array.isArray(data) ? data : [])).catch(console.error);
     }, []);
 
-    // Persist Cart
     useEffect(() => {
         localStorage.setItem('janara_cart', JSON.stringify(cart));
     }, [cart]);
@@ -88,7 +91,7 @@ const Sales = () => {
                 nome: product.nome,
                 preco_unitario: product.preco_venda,
                 quantidade: 1,
-                estoque_max: product.qtd // Store max stock in cart item for easy validation later
+                estoque_max: product.qtd
             }];
         });
     };
@@ -122,29 +125,53 @@ const Sales = () => {
 
     const finalTotal = Math.max(0, subtotal - discountValue);
 
+    // Calculate remaining and status
+    const paidValue = amountPaid === '' ? finalTotal : parseFloat(amountPaid);
+    const remainingValue = Math.max(0, finalTotal - paidValue);
+    const paymentStatus = remainingValue > 0 ? (remainingValue === finalTotal ? 'pendente' : 'parcial') : 'pago';
+
+    // Auto-fill amountPaid when cart changes if it was "full" before
+    // But better to just let it be empty (implying full payment) or controlled.
+    // We'll treat empty string as "Full Payment" for logic, but for UI keep it explicit.
+
     const handleCheckout = async () => {
         if (cart.length === 0) return;
+
+        // Validation for partial payment
+        if (remainingValue > 0 && !selectedClientId) {
+            toast.error("Para pagamentos parciais ou pendentes, é obrigatório selecionar um cliente.");
+            return;
+        }
+        if (remainingValue > 0 && !dueDate) {
+            toast.error("Por favor, defina uma data de vencimento para o saldo restante.");
+            return;
+        }
 
         const saleData = {
             valor_total: finalTotal,
             subtotal: subtotal,
             desconto: discountValue,
             metodo_pagamento: paymentMethod,
-            cliente_id: selectedClientId || null
+            cliente_id: selectedClientId || null,
+            // New Fields
+            valor_pago: paidValue,
+            status_pagamento: paymentStatus,
+            data_vencimento: remainingValue > 0 ? dueDate : null
         };
 
         setLoading(true);
         try {
             const sale = await db.sales.create(saleData, cart);
             const clientName = clients.find(c => c.id === selectedClientId)?.nome || 'Consumidor Final';
-            setLastSale({ ...sale, items: cart, clientName });
+            setLastSale({ ...sale, items: cart, clientName, remainingValue, paidValue });
             setShowReceiptModal(true);
             setCart([]);
             setSelectedClientId('');
+            setAmountPaid('');
+            setDueDate('');
             setDiscount(0);
             toast.success("Venda realizada com sucesso!");
 
-            // Refresh products
             await loadProducts();
         } catch (error) {
             console.error(error);
@@ -198,9 +225,17 @@ const Sales = () => {
         doc.text(`TOTAL: R$ ${lastSale.valor_total.toFixed(2)}`, 40, y, { align: 'center' });
         y += 5;
         doc.setFontSize(10);
-        doc.text(`Pagamento: ${lastSale.metodo_pagamento}`, 40, y, { align: 'center' });
 
-        // Open in new window for mobile printing support
+        // Payment Details
+        doc.text(`Pago: R$ ${lastSale.paidValue?.toFixed(2)} (${lastSale.metodo_pagamento})`, 40, y, { align: 'center' });
+        y += 5;
+
+        if (lastSale.remainingValue > 0) {
+            doc.text(`Restante: R$ ${lastSale.remainingValue.toFixed(2)}`, 40, y, { align: 'center' });
+            y += 5;
+            doc.text(`Vencimento: ${new Date(lastSale.data_vencimento).toLocaleDateString()}`, 40, y, { align: 'center' });
+        }
+
         const pdfUrl = doc.output('bloburl');
         window.open(pdfUrl, '_blank');
     };
@@ -256,29 +291,15 @@ const Sales = () => {
                 {/* Pagination */}
                 <div className="p-3 border-t bg-gray-50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
-                            disabled={page === 1}
-                        >
+                        <Button variant="secondary" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <span className="text-sm text-gray-600">
-                            Pág. {page} de {totalPages}
-                        </span>
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            disabled={page === totalPages}
-                        >
+                        <span className="text-sm text-gray-600">Pág. {page} de {totalPages}</span>
+                        <Button variant="secondary" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
-                    <span className="text-xs text-gray-500 hidden sm:inline-block">
-                        {totalCount} produtos
-                    </span>
+                    <span className="text-xs text-gray-500 hidden sm:inline-block">{totalCount} produtos</span>
                 </div>
             </div>
 
@@ -296,17 +317,12 @@ const Sales = () => {
             </button>
 
             {/* Right: Cart (Responsive) */}
-            <div className={`
-                fixed inset-0 z-50 bg-white md:relative md:inset-auto md:z-auto md:w-96 md:bg-white md:rounded-lg md:shadow md:flex md:flex-col
-                ${isCartOpen ? 'flex flex-col' : 'hidden md:flex'}
-            `}>
+            <div className={`fixed inset-0 z-50 bg-white md:relative md:inset-auto md:z-auto md:w-96 md:bg-white md:rounded-lg md:shadow md:flex md:flex-col ${isCartOpen ? 'flex flex-col' : 'hidden md:flex'}`}>
                 <div className="p-4 border-b bg-gray-50 rounded-t-lg flex justify-between items-center">
                     <h2 className="text-lg font-medium text-gray-900 flex items-center">
                         <ShoppingCart className="mr-2 h-5 w-5" /> Carrinho
                     </h2>
-                    <button onClick={() => setIsCartOpen(false)} className="md:hidden text-gray-500">
-                        Fechar
-                    </button>
+                    <button onClick={() => setIsCartOpen(false)} className="md:hidden text-gray-500">Fechar</button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -322,16 +338,10 @@ const Sales = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <Button variant="ghost" size="sm" onClick={() => updateQuantity(item.produto_id, -1)} className="h-10 w-10 p-0 flex items-center justify-center rounded-full border border-gray-200">
-                                        <Minus className="h-5 w-5" />
-                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => updateQuantity(item.produto_id, -1)} className="h-10 w-10 p-0 flex items-center justify-center rounded-full border border-gray-200"><Minus className="h-5 w-5" /></Button>
                                     <span className="w-6 text-center text-base font-medium">{item.quantidade}</span>
-                                    <Button variant="ghost" size="sm" onClick={() => updateQuantity(item.produto_id, 1)} className="h-10 w-10 p-0 flex items-center justify-center rounded-full border border-gray-200">
-                                        <Plus className="h-5 w-5" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.produto_id)} className="h-10 w-10 p-0 flex items-center justify-center text-red-500 hover:text-red-600 rounded-full hover:bg-red-50 ml-2">
-                                        <Trash className="h-5 w-5" />
-                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => updateQuantity(item.produto_id, 1)} className="h-10 w-10 p-0 flex items-center justify-center rounded-full border border-gray-200"><Plus className="h-5 w-5" /></Button>
+                                    <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.produto_id)} className="h-10 w-10 p-0 flex items-center justify-center text-red-500 hover:text-red-600 rounded-full hover:bg-red-50 ml-2"><Trash className="h-5 w-5" /></Button>
                                 </div>
                             </div>
                         ))
@@ -339,14 +349,15 @@ const Sales = () => {
                 </div>
 
                 <div className="p-4 border-t bg-gray-50 rounded-b-lg space-y-4">
+                    {/* Client Selection */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                            <User className="h-4 w-4 mr-1" /> Cliente
+                            <User className="h-4 w-4 mr-1" /> Cliente {remainingValue > 0 && <span className="text-red-500 ml-1">*</span>}
                         </label>
                         <select
                             value={selectedClientId}
                             onChange={(e) => setSelectedClientId(e.target.value)}
-                            className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
+                            className={`block w-full border rounded-md shadow-sm sm:text-sm p-2 ${remainingValue > 0 && !selectedClientId ? 'border-red-300 ring-1 ring-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}
                         >
                             <option value="">Consumidor Final</option>
                             {clients.map(client => (
@@ -355,6 +366,7 @@ const Sales = () => {
                         </select>
                     </div>
 
+                    {/* Totals & Discount */}
                     <div className="flex justify-between items-center text-sm text-gray-600">
                         <span>Subtotal:</span>
                         <span>{subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
@@ -363,21 +375,11 @@ const Sales = () => {
                     <div className="flex items-center space-x-2">
                         <div className="flex-1">
                             <label className="block text-xs font-medium text-gray-500 mb-1">Desconto</label>
-                            <Input
-                                type="number"
-                                min="0"
-                                value={discount}
-                                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                                className="sm:text-xs py-1.5"
-                            />
+                            <Input type="number" min="0" value={discount} onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} className="sm:text-xs py-1.5" />
                         </div>
                         <div className="w-24">
                             <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
-                            <select
-                                value={discountType}
-                                onChange={(e) => setDiscountType(e.target.value)}
-                                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1.5"
-                            >
+                            <select value={discountType} onChange={(e) => setDiscountType(e.target.value)} className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-xs p-1.5">
                                 <option value="value">R$</option>
                                 <option value="percent">%</option>
                             </select>
@@ -389,8 +391,47 @@ const Sales = () => {
                         <span>{finalTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                     </div>
 
+                    {/* Partial Payment Section */}
+                    <div className="space-y-3 pt-2 border-t border-dashed border-gray-300">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Valor Pago</label>
+                            <div className="relative rounded-md shadow-sm">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span className="text-gray-500 sm:text-sm">R$</span>
+                                </div>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder={finalTotal.toFixed(2)}
+                                    value={amountPaid}
+                                    onChange={(e) => setAmountPaid(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                        </div>
+
+                        {remainingValue > 0 && (
+                            <div className="bg-orange-50 p-3 rounded-md border border-orange-100 animate-fade-in">
+                                <div className="flex justify-between text-sm mb-2">
+                                    <span className="text-orange-800 font-medium">Restante:</span>
+                                    <span className="text-orange-900 font-bold">{remainingValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                </div>
+                                <label className="block text-xs font-medium text-orange-800 mb-1 flex items-center">
+                                    <Calendar className="h-3 w-3 mr-1" /> Data de Vencimento
+                                </label>
+                                <Input
+                                    type="date"
+                                    value={dueDate}
+                                    onChange={(e) => setDueDate(e.target.value)}
+                                    className="text-sm border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento (Entrada)</label>
                         <select
                             value={paymentMethod}
                             onChange={(e) => setPaymentMethod(e.target.value)}
@@ -403,12 +444,7 @@ const Sales = () => {
                         </select>
                     </div>
 
-                    <Button
-                        onClick={handleCheckout}
-                        disabled={cart.length === 0}
-                        className="w-full"
-                        size="lg"
-                    >
+                    <Button onClick={handleCheckout} disabled={cart.length === 0} className="w-full" size="lg">
                         Finalizar Venda
                     </Button>
                 </div>
@@ -431,20 +467,19 @@ const Sales = () => {
                                     <h3 className="text-lg leading-6 font-medium text-gray-900">Venda Realizada!</h3>
                                     <div className="mt-2">
                                         <p className="text-sm text-gray-500">A venda foi registrada com sucesso.</p>
+                                        {lastSale?.remainingValue > 0 && (
+                                            <p className="text-sm text-orange-600 mt-2 font-medium">
+                                                Saldo devedor: R$ {lastSale.remainingValue.toFixed(2)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                             <div className="mt-5 sm:mt-6 space-y-2">
-                                <button
-                                    onClick={generatePDF}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm"
-                                >
+                                <button onClick={generatePDF} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">
                                     <Printer className="mr-2 h-5 w-5" /> Imprimir Recibo
                                 </button>
-                                <button
-                                    onClick={() => setShowReceiptModal(false)}
-                                    className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm"
-                                >
+                                <button onClick={() => setShowReceiptModal(false)} className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">
                                     Fechar
                                 </button>
                             </div>
