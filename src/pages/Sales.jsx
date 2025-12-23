@@ -200,7 +200,9 @@ const Sales = () => {
         doc.setFontSize(10);
         doc.text(`Pagamento: ${lastSale.metodo_pagamento}`, 40, y, { align: 'center' });
 
-        doc.save(`recibo_${lastSale.id.slice(0, 8)}.pdf`);
+        // Open in new window for mobile printing support
+        const pdfUrl = doc.output('bloburl');
+        window.open(pdfUrl, '_blank');
     };
 
     return (
@@ -320,15 +322,15 @@ const Sales = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <Button variant="ghost" size="sm" onClick={() => updateQuantity(item.produto_id, -1)} className="p-1 h-auto">
-                                        <Minus className="h-3 w-3" />
+                                    <Button variant="ghost" size="sm" onClick={() => updateQuantity(item.produto_id, -1)} className="h-10 w-10 p-0 flex items-center justify-center rounded-full border border-gray-200">
+                                        <Minus className="h-5 w-5" />
                                     </Button>
-                                    <span className="w-4 text-center text-sm font-medium">{item.quantidade}</span>
-                                    <Button variant="ghost" size="sm" onClick={() => updateQuantity(item.produto_id, 1)} className="p-1 h-auto">
-                                        <Plus className="h-3 w-3" />
+                                    <span className="w-6 text-center text-base font-medium">{item.quantidade}</span>
+                                    <Button variant="ghost" size="sm" onClick={() => updateQuantity(item.produto_id, 1)} className="h-10 w-10 p-0 flex items-center justify-center rounded-full border border-gray-200">
+                                        <Plus className="h-5 w-5" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.produto_id)} className="text-red-500 hover:text-red-600 p-1 h-auto">
-                                        <Trash className="h-3 w-3" />
+                                    <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.produto_id)} className="h-10 w-10 p-0 flex items-center justify-center text-red-500 hover:text-red-600 rounded-full hover:bg-red-50 ml-2">
+                                        <Trash className="h-5 w-5" />
                                     </Button>
                                 </div>
                             </div>
