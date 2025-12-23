@@ -391,10 +391,27 @@ const Sales = () => {
                         <span>{finalTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                     </div>
 
-                    {/* Partial Payment Section */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento</label>
+                        <select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
+                        >
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="dinheiro_parcelado">Dinheiro (Parcelado / Crediário)</option>
+                            <option value="cartao_credito">Cartão de Crédito</option>
+                            <option value="cartao_debito">Cartão de Débito</option>
+                            <option value="pix">PIX</option>
+                        </select>
+                    </div>
+
+                    {/* Partial Payment Section - Moved below payment method for better flow */}
                     <div className="space-y-3 pt-2 border-t border-dashed border-gray-300">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Valor Pago</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {paymentMethod === 'dinheiro_parcelado' ? 'Valor da Entrada' : 'Valor Pago (Opcional)'}
+                            </label>
                             <div className="relative rounded-md shadow-sm">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span className="text-gray-500 sm:text-sm">R$</span>
@@ -418,7 +435,7 @@ const Sales = () => {
                                     <span className="text-orange-900 font-bold">{remainingValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                                 </div>
                                 <label className="block text-xs font-medium text-orange-800 mb-1 flex items-center">
-                                    <Calendar className="h-3 w-3 mr-1" /> Data de Vencimento
+                                    <Calendar className="h-3 w-3 mr-1" /> Data do Próximo Pagamento
                                 </label>
                                 <Input
                                     type="date"
@@ -428,20 +445,6 @@ const Sales = () => {
                                 />
                             </div>
                         )}
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento (Entrada)</label>
-                        <select
-                            value={paymentMethod}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2"
-                        >
-                            <option value="dinheiro">Dinheiro</option>
-                            <option value="cartao_credito">Cartão de Crédito</option>
-                            <option value="cartao_debito">Cartão de Débito</option>
-                            <option value="pix">PIX</option>
-                        </select>
                     </div>
 
                     <Button onClick={handleCheckout} disabled={cart.length === 0} className="w-full" size="lg">
