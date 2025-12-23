@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import { supabase } from '../services/supabaseClient';
-import { ArrowUpCircle, ArrowDownCircle, Plus, PieChart, Wallet, Clock, MessageCircle, AlertCircle, ShoppingBag, CheckCircle, ChevronDown, ChevronRight, Tag } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, Plus, PieChart, Wallet, Clock, MessageCircle, AlertCircle, ShoppingBag, CheckCircle, ChevronDown, ChevronRight, Tag, CheckSquare } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -47,34 +47,35 @@ const Financial = () => {
             const stats = await db.financial.getByCategory();
             setExpenseStats(stats);
 
-            // 3. Receivables
-            const { data: pendingSales } = await supabase
-                .from('vendas')
+            // 3. Receivables (Installments from 'parcelas')
+            const { data: installData, error: instError } = await supabase
+                .from('parcelas')
                 .select(`
-                    id, created_at, valor_total, valor_pago, status_pagamento, data_vencimento, 
-                    cliente_nome_temp, clientes (nome, telefone)
+                    id, venda_id, numero_parcela, valor_parcela, data_vencimento, status,
+                    clientes (nome, telefone)
                 `)
-                .or('status_pagamento.eq.pendente,status_pagamento.eq.parcial')
+                .or('status.eq.pendente,status.eq.atrasado,status.eq.parcial')
                 .order('data_vencimento', { ascending: true });
 
-            const today = new Date().toISOString().split('T')[0];
-            const sortedReceivables = (pendingSales || []).map(sale => {
-                const total = parseFloat(sale.valor_total);
-                const paid = parseFloat(sale.valor_pago || 0);
-                const remaining = total - paid;
-                const isOverdue = sale.data_vencimento && sale.data_vencimento < today;
+            if (instError) console.error("Error fetching installments:", instError);
 
+            const today = new Date().toISOString().split('T')[0];
+            const sortedReceivables = (installData || []).map(inst => {
+                const isOverdue = inst.data_vencimento < today;
                 return {
-                    ...sale,
-                    remaining,
+                    id: inst.id,
+                    venda_id: inst.venda_id,
+                    data_vencimento: inst.data_vencimento,
+                    amount: parseFloat(inst.valor_parcela),
                     isOverdue,
-                    clientName: sale.clientes?.nome || sale.cliente_nome_temp || 'Cliente'
+                    clientName: inst.clientes?.nome || 'Cliente',
+                    phone: inst.clientes?.telefone,
+                    parcelNumber: inst.numero_parcela
                 };
             });
             setReceivables(sortedReceivables);
 
             // 4. Consignments (Grouped by Brand)
-            // Query: items where is_consignado is true AND consignado_pago is false
             const { data: soldConsignments, error: consError } = await supabase
                 .from('itens_venda')
                 .select('*')
@@ -83,7 +84,6 @@ const Financial = () => {
                 .order('created_at', { ascending: false });
 
             if (!consError && soldConsignments) {
-                // Group by brand
                 const groups = {};
                 soldConsignments.forEach(item => {
                     const brand = item.marca || 'Sem Marca';
@@ -134,7 +134,6 @@ const Financial = () => {
                 data: new Date().toISOString()
             });
 
-            // Update consignment items
             if (expenseForm.isConsignmentBatch && expenseForm.itemIds?.length > 0) {
                 await supabase
                     .from('itens_venda')
@@ -149,6 +148,38 @@ const Financial = () => {
             await loadData();
         } catch (error) {
             toast.error("Erro: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePayInstallment = async (inst) => {
+        if (!window.confirm(`Confirmar recebimento de ${formatCurrency(inst.amount)} de ${inst.clientName}?`)) return;
+
+        setLoading(true);
+        try {
+            // 1. Update Parcela Status
+            const { error: upError } = await supabase
+                .from('parcelas')
+                .update({ status: 'pago', data_pagamento: new Date().toISOString() })
+                .eq('id', inst.id);
+
+            if (upError) throw upError;
+
+            // 2. Add Entry to Financeiro
+            await db.financial.add({
+                tipo: 'entrada',
+                categoria: 'Vendas',
+                descricao: `Parc. ${inst.parcelNumber} - ${inst.clientName}`,
+                valor: inst.amount,
+                data: new Date().toISOString()
+            });
+
+            toast.success("Parcela recebida com sucesso!");
+            loadData();
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro ao processar recebimento.");
         } finally {
             setLoading(false);
         }
@@ -210,14 +241,17 @@ const Financial = () => {
 
             {activeTab === 'overview' && (
                 <>
-                    {/* Receivables Table Removed for Brevity (Same as before) */}
-                    {receivables.length > 0 && (
+                    {/* Contas a Receber (Installments) */}
+                    {receivables.length > 0 ? (
                         <div className="bg-white rounded-xl shadow-sm border border-orange-100 overflow-hidden mb-8">
-                            <div className="px-6 py-4 border-b border-orange-100 bg-orange-50/50">
+                            <div className="px-6 py-4 border-b border-orange-100 bg-orange-50/50 flex justify-between items-center">
                                 <h2 className="text-lg font-bold text-orange-900 flex items-center">
                                     <Clock className="mr-2 h-5 w-5 text-orange-600" />
-                                    Contas a Receber
+                                    Contas a Receber (Parcelas)
                                 </h2>
+                                <span className="text-sm text-orange-700 bg-orange-100 px-2 py-1 rounded">
+                                    Total: {formatCurrency(receivables.reduce((a, b) => a + b.amount, 0).toFixed(2))}
+                                </span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
@@ -225,27 +259,45 @@ const Financial = () => {
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimento</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Restante</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parcela</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
                                             <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {receivables.map((calc) => (
-                                            <tr key={calc.id} className={calc.isOverdue ? 'bg-red-50' : ''}>
-                                                <td className="px-6 py-4 text-sm font-medium">{new Date(calc.data_vencimento).toLocaleDateString()}</td>
-                                                <td className="px-6 py-4 text-sm">{calc.clientName}</td>
-                                                <td className="px-6 py-4 text-sm text-right font-bold">{formatCurrency(calc.remaining.toFixed(2))}</td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <Button size="sm" variant="outline" onClick={() => {
-                                                        const phone = calc.clientes?.telefone?.replace(/\D/g, '');
-                                                        if (phone) window.open(`https://wa.me/55${phone}?text=Olá ${calc.clientName}, falta pagar R$ ${calc.remaining.toFixed(2)}`, '_blank');
-                                                    }}>Cobrar</Button>
+                                        {receivables.map((inst) => (
+                                            <tr key={inst.id} className={inst.isOverdue ? 'bg-red-50' : ''}>
+                                                <td className="px-6 py-4 text-sm font-medium">
+                                                    {new Date(inst.data_vencimento).toLocaleDateString()}
+                                                    {inst.isOverdue && <span className="ml-2 text-red-600 text-xs font-bold">(Atrasado)</span>}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">{inst.clientName}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-500">#{inst.parcelNumber}</td>
+                                                <td className="px-6 py-4 text-sm text-right font-bold">{formatCurrency(inst.amount.toFixed(2))}</td>
+                                                <td className="px-6 py-4 text-center flex justify-center gap-2">
+                                                    <Button size="sm" variant="outline" className="border-green-600 text-green-700 hover:bg-green-50"
+                                                        onClick={() => handlePayInstallment(inst)}>
+                                                        <CheckSquare className="h-4 w-4 mr-1" /> Receber
+                                                    </Button>
+
+                                                    {inst.phone && (
+                                                        <Button size="sm" variant="ghost" className="text-green-600" onClick={() => {
+                                                            const phone = inst.phone?.replace(/\D/g, '');
+                                                            if (phone) window.open(`https://wa.me/55${phone}?text=Olá ${inst.clientName}, lembrete do vencimento da parcela ${inst.parcelNumber} no valor de R$ ${inst.amount.toFixed(2)}`, '_blank');
+                                                        }}>
+                                                            <MessageCircle className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8 text-center text-gray-500">
+                            Nenhuma conta a receber pendente.
                         </div>
                     )}
 

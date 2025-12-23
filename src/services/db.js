@@ -116,9 +116,19 @@ export const db = {
       // Use RPC for atomic transaction
       const { data, error } = await supabase.rpc('finalizar_venda', {
         p_venda: saleData,
-        p_itens: items
+        p_itens: items,
+        p_parcelas: [] // Default empty for legacy calls
       });
 
+      if (error) throw error;
+      return data;
+    },
+    createWithInstallments: async (saleData, items, parcelas) => {
+      const { data, error } = await supabase.rpc('finalizar_venda', {
+        p_venda: saleData,
+        p_itens: items,
+        p_parcelas: parcelas
+      });
       if (error) throw error;
       return data;
     },

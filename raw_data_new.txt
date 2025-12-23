@@ -1,0 +1,60 @@
+DESCRIÇÃO					ESTOQUE COMPRADO	PREÇO CUSTO	PREÇO DE VENDA	VENDIDOS	ESTOQUE FINAL
+Sabonete de rosto- espumante					1	  20,00 	  35,00 	R$ 35,00	0
+Sabonete de rosto esfoliante- poran					1	  20,00 	  35,00 		1
+Sabonete de rosto- manchas- poran					1	  20,00 	  35,00 		1
+Blush em bastão- Febella					1	  20,00 	  35,00 		1
+Blush em bastão- Febella					1	  20,00 	  35,00 	R$ 35,00	0
+Blush bastão- dapop					1	  20,00 	  35,00 	R$ 35,00	0
+Contorno em bastão- dapop					1	  20,00 	  35,00 		1
+Água micelar- max love					1	  20,00 	  35,00 		1
+Sabonete intímo					1	  20,00 	  35,00 		1
+Serum- controle de oleosidade					1	  20,00 	  35,00 		1
+Serum- fixador de maquiagem					1	  20,00 	  35,00 		1
+Serum- manchas					1	  20,00 	  35,00 	R$ 35,00	0
+Sombra para sombrancelha					1	  20,00 	  35,00 		1
+Pó compacto- p30					1	  20,00 	  35,00 		1
+Pó compacto- p10					1	  20,00 	  35,00 		1
+Pó compacto- max love					1	  20,00 	  35,00 	R$ 35,00	0
+Pó translucido					1	  20,00 	  35,00 		1
+Pó translucido					1	  20,00 	  35,00 		1
+Pó trasluscido					1	  20,00 	  35,00 		1
+Pó trasluscido					1	  20,00 	  35,00 		1
+Corretivo					1	  20,00 	  35,00 	R$ 35,00	0
+Fixador de sombrancelha					1	  20,00 	  35,00 	R$ 35,00	0
+Blush- mahav					1	  20,00 	  35,00 		1
+Iluminador					1	  20,00 	  35,00 		1
+Gloss labial infantil- vivai					1	  20,00 	  35,00 		1
+Gloss labial infantil- vivai					1	  20,00 	  35,00 		1
+Gloss labial infantil- vivai					1	  20,00 	  35,00 		1
+Gloss lip- max love					1	  20,00 	  35,00 		1
+Gloss com acido hialurônico					1	  20,00 	  35,00 		1
+Rimel Melu					1	  20,00 	  35,00 		1
+Rimel Melu					1	  20,00 	  35,00 		1
+Rimel- Febella					1	  20,00 	  35,00 		1
+Rimel- Febella					1	  20,00 	  35,00 		1
+Gloss- mia make					1	  20,00 	  35,00 		1
+Gloss- mia make					1	  20,00 	  35,00 		1
+Gloss nelo mel					1	  20,00 	  35,00 		1
+Lip Glow					1	  20,00 	  35,00 		1
+Lip Glow					1	  20,00 	  35,00 		1
+Gel aromatizante					1	  20,00 	  35,00 		1
+Oleo corporal					1	  20,00 	  35,00 	R$ 35,00	0
+									
+
+MAQUIAGENS										
+PAGAMENTO ATÉ O DIA 15/01/2026										
+DESCRIÇÃO					QTD	PREÇO UNITÁRIO	PREÇO ATACADO	PREÇO VENDA UNI.	PREÇO DE VENDA	VENDIDOS
+Pente polvo					6	R$ 3,35	R$ 20,10	R$ 10,00	R$ 60,00	
+Serum- max love					6	R$ 8,00	R$ 48,00	R$ 20,00	R$ 120,00	
+Paleta de contorno- max love					2	R$ 10,00	R$ 20,00	R$ 25,00	R$ 50,00	
+Balm hidrantante teen Mia					6	R$ 4,66	R$ 27,96	R$ 12,00	R$ 72,00	
+Delineador					2	R$ 7,00	R$ 14,00	R$ 12,00	R$ 24,00	
+Base liquída					6	R$ 15,33	R$ 91,98	R$ 30,00	R$ 30,00	
+Esponjinha de maquiagem					12	R$ 2,08	R$ 24,96	R$ 5,00	R$ 60,00	
+Liptint max love					2	R$ 6,00	R$ 12,00	R$ 10,00	R$ 20,00	
+Escova de limpeza facial					2	R$ 8,99	R$ 17,98	R$ 20,00	R$ 40,00	
+Gloss Lip volumoso- max love					2	R$ 8,00	R$ 16,00	R$ 15,00	R$ 30,00	
+Lip Balm de Mel					1	R$ 8,99	R$ 8,99	R$ 20,00	R$ 20,00	
+Blush Isis make					4	R$ 6,50	R$ 26,00	R$ 15,00	R$ 60,00	
+Esfoliante facial- max love					1	R$ 7,49	R$ 7,49	R$ 18,00	R$ 18,00	
+Lip Oil- max love					3	R$ 7,99	R$ 23,97	R$ 20,00	R$ 60,00	
