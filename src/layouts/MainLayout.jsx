@@ -6,11 +6,11 @@ import { useAuth } from '../contexts/AuthContext';
 
 const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'PDV', href: '/sales', icon: ShoppingCart }, // Shortened for mobile
     { name: 'Estoque', href: '/stock', icon: Box },
-    { name: 'Vendas (PDV)', href: '/sales', icon: ShoppingCart },
-    { name: 'Clientes', href: '/clients', icon: Users },
     { name: 'Financeiro', href: '/financial', icon: DollarSign },
     { name: 'Relatórios', href: '/reports', icon: FileText },
+    // Clients moved to 'More' menu or kept if space permits. Let's keep 5 items max for bottom bar usually.
 ];
 
 const MainLayout = () => {
@@ -30,53 +30,23 @@ const MainLayout = () => {
 
     return (
         <div className="min-h-screen bg-gray-100">
-            {/* Mobile sidebar */}
-            {sidebarOpen && (
-                <div className="fixed inset-0 z-40 flex md:hidden">
-                    <div className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity" onClick={() => setSidebarOpen(false)}></div>
-                    <div className="relative flex-1 flex flex-col max-w-xs w-full bg-zinc-900 shadow-xl transform transition-transform">
-                        <div className="absolute top-0 right-0 -mr-12 pt-2">
-                            <button
-                                className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                                onClick={() => setSidebarOpen(false)}
-                            >
-                                <span className="sr-only">Close sidebar</span>
-                                <X className="h-6 w-6 text-white" />
-                            </button>
-                        </div>
-                        <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-                            <div className="flex-shrink-0 flex items-center px-4 text-white text-lg font-bold tracking-tight">
-                                <span className="text-red-500">Jana</span> Roupas e Acessórios
-                            </div>
-                            <nav className="mt-8 px-2 space-y-2">
-                                {navigation.map((item) => (
-                                    <NavLink
-                                        key={item.name}
-                                        to={item.href}
-                                        className={({ isActive }) =>
-                                            `group flex items-center px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${isActive
-                                                ? 'bg-zinc-800 text-red-500 shadow-sm border-l-4 border-red-500'
-                                                : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-red-400'
-                                            }`
-                                        }
-                                        onClick={() => setSidebarOpen(false)}
-                                    >
-                                        <item.icon className={`mr-4 h-5 w-5 flex-shrink-0 transition-colors ${({ isActive }) => isActive ? 'text-red-500' : 'text-zinc-500 group-hover:text-red-400'}`} />
-                                        {item.name}
-                                    </NavLink>
-                                ))}
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full group flex items-center px-4 py-3 text-base font-medium rounded-xl text-zinc-400 hover:bg-red-900/20 hover:text-red-500 transition-all duration-200 mt-4"
-                                >
-                                    <LogOut className="mr-4 h-5 w-5 flex-shrink-0 group-hover:text-red-500" />
-                                    Sair
-                                </button>
-                            </nav>
-                        </div>
-                    </div>
+            {/* Bottom Navigation for Mobile */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 px-2 pb-safe">
+                <div className="flex justify-between items-center h-16">
+                    {navigation.slice(0, 5).map((item) => (
+                        <NavLink
+                            key={item.name}
+                            to={item.href}
+                            className={({ isActive }) =>
+                                `flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive ? 'text-red-600' : 'text-zinc-500'}`
+                            }
+                        >
+                            <item.icon className="h-6 w-6" />
+                            <span className="text-[10px] font-medium truncate max-w-[60px]">{item.name}</span>
+                        </NavLink>
+                    ))}
                 </div>
-            )}
+            </div>
 
             {/* Static sidebar for desktop */}
             <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
@@ -124,19 +94,14 @@ const MainLayout = () => {
 
             {/* Main Content */}
             <div className="md:pl-64 flex flex-col flex-1">
-                <div className="sticky top-0 z-10 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-gray-100 flex justify-between items-center pr-4">
-                    <button
-                        type="button"
-                        className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500"
-                        onClick={() => setSidebarOpen(true)}
-                    >
-                        <span className="sr-only">Open sidebar</span>
-                        <Menu className="h-6 w-6" aria-hidden="true" />
+                <div className="sticky top-0 z-10 md:hidden pl-4 pt-3 pb-3 bg-white shadow-sm flex justify-between items-center pr-4">
+                    <span className="text-red-600 font-bold text-lg">Jana <span className="text-zinc-800">Roupas</span></span>
+                    <button onClick={handleLogout} className="text-zinc-500 hover:text-red-500">
+                        <LogOut className="h-5 w-5" />
                     </button>
-                    <span className="text-zinc-800 font-bold text-sm">Jana Roupas</span>
                 </div>
                 <main className="flex-1 relative">
-                    <div className="py-6">
+                    <div className="py-6 mb-16 md:mb-0">
                         <Outlet />
                     </div>
                     <div className="md:hidden py-4 text-center border-t border-gray-200 mt-auto">

@@ -13,7 +13,10 @@ const Sales = () => {
     const [products, setProducts] = useState([]);
     const [clients, setClients] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [cart, setCart] = useState([]);
+    const [cart, setCart] = useState(() => {
+        const savedCart = localStorage.getItem('janara_cart');
+        return savedCart ? JSON.parse(savedCart) : [];
+    });
     const [paymentMethod, setPaymentMethod] = useState('dinheiro');
     const [selectedClientId, setSelectedClientId] = useState('');
     const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -21,6 +24,7 @@ const Sales = () => {
     const [discount, setDiscount] = useState(0); // Value in R$
     const [discountType, setDiscountType] = useState('value'); // 'value' or 'percent'
     const [loading, setLoading] = useState(false);
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     // Pagination State
     const [page, setPage] = useState(1);
@@ -47,6 +51,11 @@ const Sales = () => {
         // Load clients once
         db.clients.list().then(data => setClients(Array.isArray(data) ? data : [])).catch(console.error);
     }, []);
+
+    // Persist Cart
+    useEffect(() => {
+        localStorage.setItem('janara_cart', JSON.stringify(cart));
+    }, [cart]);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -138,7 +147,14 @@ const Sales = () => {
             // Refresh products
             await loadProducts();
         } catch (error) {
-            toast.error('Erro ao finalizar venda: ' + error.message);
+            console.error(error);
+            let msg = 'Erro ao finalizar venda.';
+            if (error.message && error.message.includes('Estoque')) {
+                msg = 'Estoque insuficiente para um ou mais produtos.';
+            } else if (error.message) {
+                msg = `Erro: ${error.message}`;
+            }
+            toast.error(msg);
         } finally {
             setLoading(false);
         }
@@ -205,7 +221,7 @@ const Sales = () => {
                         />
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 content-start">
+                <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 content-start pb-20 md:pb-4">
                     {products.map(product => (
                         <div
                             key={product.id}
@@ -264,12 +280,31 @@ const Sales = () => {
                 </div>
             </div>
 
-            {/* Right: Cart */}
-            <div className="w-full md:w-96 bg-white rounded-lg shadow flex flex-col">
-                <div className="p-4 border-b bg-gray-50 rounded-t-lg">
+            {/* Mobile Cart Floating Button */}
+            <button
+                className="md:hidden fixed bottom-20 right-4 bg-indigo-600 text-white p-4 rounded-full shadow-lg z-40 flex items-center justify-center transform hover:scale-105 transition-all"
+                onClick={() => setIsCartOpen(true)}
+            >
+                <ShoppingCart className="h-6 w-6" />
+                {cart.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {cart.reduce((acc, item) => acc + item.quantidade, 0)}
+                    </span>
+                )}
+            </button>
+
+            {/* Right: Cart (Responsive) */}
+            <div className={`
+                fixed inset-0 z-50 bg-white md:relative md:inset-auto md:z-auto md:w-96 md:bg-white md:rounded-lg md:shadow md:flex md:flex-col
+                ${isCartOpen ? 'flex flex-col' : 'hidden md:flex'}
+            `}>
+                <div className="p-4 border-b bg-gray-50 rounded-t-lg flex justify-between items-center">
                     <h2 className="text-lg font-medium text-gray-900 flex items-center">
                         <ShoppingCart className="mr-2 h-5 w-5" /> Carrinho
                     </h2>
+                    <button onClick={() => setIsCartOpen(false)} className="md:hidden text-gray-500">
+                        Fechar
+                    </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">

@@ -73,11 +73,14 @@ export const db = {
       return data;
     },
     update: async (id, updates) => {
+      // The DB Trigger 'tr_log_stock_change' now handles stock movement logging automatically.
       const { data, error } = await supabase.from('produtos').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     delete: async (id) => {
+      // Soft delete implemented via boolean would be better, but per user request adhering to current structure.
+      // We will prevent deletion if foreign keys exist via DB constraints (which exist).
       const { error } = await supabase.from('produtos').delete().eq('id', id);
       if (error) throw error;
     },
