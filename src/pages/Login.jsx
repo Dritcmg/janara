@@ -28,66 +28,61 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex bg-white">
-            {/* Left Side - Visual & Brand */}
-            <div className="hidden lg:flex lg:w-1/2 relative bg-gray-900 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-700 to-pink-500 opacity-90"></div>
-                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay opacity-50"></div>
+            {/* Left Side - Visual & Brand with Light Guava background */}
+            <div className="hidden lg:flex lg:w-1/2 relative bg-[#FFF0F0] overflow-hidden items-center justify-center">
+                {/* Soft Guava/Red Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#ffe4e6] via-[#fff1f2] to-white opacity-80"></div>
 
-                <div className="relative z-10 w-full flex flex-col justify-between p-12 text-white">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-                                <span className="font-bold text-xl">J</span>
-                            </div>
-                            <span className="text-2xl font-bold tracking-wider">Jana Store</span>
-                        </div>
+                {/* Decorative Elements for "Chic" feel */}
+                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-red-500/5 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-red-400/10 blur-3xl"></div>
+
+                <div className="relative z-10 flex flex-col items-center justify-center p-12 text-center">
+                    <div className="w-64 h-64 bg-white rounded-full shadow-2xl flex items-center justify-center mb-8 p-4 transform hover:scale-105 transition-transform duration-500">
+                        <img
+                            src="/logo.jpg"
+                            alt="Jana Store Logo"
+                            className="w-full h-full object-cover rounded-full"
+                        />
                     </div>
 
-                    <div className="mb-12">
-                        <h1 className="text-5xl font-bold mb-6 leading-tight">
-                            Gestão inteligente <br /> para o seu negócio
+                    <div className="space-y-4 max-w-md">
+                        <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
+                            Jana Store
                         </h1>
-                        <p className="text-lg text-indigo-100 max-w-md leading-relaxed">
-                            Acompanhe vendas, estoque e clientes em uma única plataforma intuitiva e elegante.
+                        <p className="text-lg text-gray-500 font-light leading-relaxed">
+                            Elegância e eficiência na gestão do seu negócio.
                         </p>
                     </div>
-
-                    <div className="text-sm text-indigo-200">
-                        &copy; {new Date().getFullYear()} Jana Store System
-                    </div>
                 </div>
-
-                {/* Decorative circles */}
-                <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
-                <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-500/30 rounded-full blur-3xl"></div>
             </div>
 
             {/* Right Side - Login Form */}
             <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24 bg-white relative">
                 {/* Mobile Header (only visible on small screens) */}
-                <div className="lg:hidden absolute top-8 left-8 flex items-center gap-2">
-                    <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">J</div>
+                <div className="lg:hidden absolute top-8 left-8 flex items-center gap-3">
+                    <img src="/logo.jpg" alt="Logo" className="h-10 w-10 rounded-full shadow-md" />
                     <span className="text-xl font-bold text-gray-900">Jana Store</span>
                 </div>
 
                 <div className="mx-auto w-full max-w-sm lg:w-96">
                     <div className="mb-10">
                         <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-                            Bem-vindo de volta
+                            Bem-vindo
                         </h2>
                         <p className="mt-2 text-sm text-gray-500">
-                            Por favor, insira seus dados para entrar.
+                            Acesse sua conta para continuar.
                         </p>
                     </div>
 
                     <form className="space-y-6" onSubmit={handleLogin}>
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                                Email corporativo
+                                Email
                             </label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-600 transition-colors duration-200" />
+                                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-red-500 transition-colors duration-200" />
                                 </div>
                                 <input
                                     id="email"
@@ -97,7 +92,8 @@ const Login = () => {
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white sm:text-sm"
+                                    // Focus ring is now Red
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500 transition-all duration-200 bg-gray-50 focus:bg-white sm:text-sm"
                                     placeholder="seu@email.com"
                                 />
                             </div>
@@ -109,14 +105,14 @@ const Login = () => {
                                     Senha
                                 </label>
                                 <div className="text-sm">
-                                    <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+                                    <a href="#" className="font-medium text-red-600 hover:text-red-500 transition-colors">
                                         Esqueceu a senha?
                                     </a>
                                 </div>
                             </div>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-600 transition-colors duration-200" />
+                                    <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-red-500 transition-colors duration-200" />
                                 </div>
                                 <input
                                     id="password"
@@ -126,7 +122,7 @@ const Login = () => {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white sm:text-sm"
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500 transition-all duration-200 bg-gray-50 focus:bg-white sm:text-sm"
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -154,13 +150,14 @@ const Login = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="group w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                                // Button is now Red
+                                className="group w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                                 {isLoading ? (
                                     <Loader className="animate-spin h-5 w-5 text-white" />
                                 ) : (
                                     <span className="flex items-center">
-                                        Entrar no Sistema
+                                        Entrar
                                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                                     </span>
                                 )}
@@ -180,8 +177,8 @@ const Login = () => {
                             </div>
                         </div>
                         <div className="mt-6 flex justify-center text-sm">
-                            <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
-                                Contate o administrador do sistema
+                            <a href="#" className="font-medium text-red-600 hover:text-red-500">
+                                Contate o suporte
                             </a>
                         </div>
                     </div>
