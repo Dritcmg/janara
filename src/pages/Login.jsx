@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, ArrowRight, Loader } from 'lucide-react';
+import { Lock, User, ArrowRight, Loader, Check, Mail } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,19 +8,43 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [resetSent, setResetSent] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { login, resetPassword } = useAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setResetSent(false);
         setIsLoading(true);
         try {
             await login(email, password);
             navigate('/');
         } catch (error) {
             setError('Credenciais inválidas. Por favor, tente novamente.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async (e) => {
+        e.preventDefault(); // Prevent form submission if triggered inside form, though it's a separate link
+        setError('');
+        setResetSent(false);
+
+        if (!email) {
+            setError('Digite seu email acima para redefinir a senha.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await resetPassword(email);
+            setResetSent(true);
+            setError('');
+        } catch (err) {
+            setError('Erro ao enviar email de redefinição. Verifique o email digitado.');
         } finally {
             setIsLoading(false);
         }
@@ -92,7 +116,6 @@ const Login = () => {
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    // Focus ring is now Red
                                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500 transition-all duration-200 bg-gray-50 focus:bg-white sm:text-sm"
                                     placeholder="seu@email.com"
                                 />
@@ -105,9 +128,13 @@ const Login = () => {
                                     Senha
                                 </label>
                                 <div className="text-sm">
-                                    <a href="#" className="font-medium text-red-600 hover:text-red-500 transition-colors">
+                                    <button
+                                        type="button"
+                                        onClick={handleForgotPassword}
+                                        className="font-medium text-red-600 hover:text-red-500 transition-colors focus:outline-none"
+                                    >
                                         Esqueceu a senha?
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                             <div className="relative group">
@@ -128,18 +155,33 @@ const Login = () => {
                             </div>
                         </div>
 
+                        {/* Error Message */}
                         {error && (
                             <div className="rounded-lg bg-red-50 p-4 border border-red-100 animate-fade-in">
                                 <div className="flex">
                                     <div className="flex-shrink-0">
-                                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                         </svg>
                                     </div>
                                     <div className="ml-3">
-                                        <h3 className="text-sm font-medium text-red-800">Erro no login</h3>
-                                        <div className="mt-2 text-sm text-red-700">
-                                            <p>{error}</p>
+                                        <p className="text-sm font-medium text-red-800">{error}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Success Message for Reset */}
+                        {resetSent && (
+                            <div className="rounded-lg bg-green-50 p-4 border border-green-100 animate-fade-in">
+                                <div className="flex">
+                                    <div className="flex-shrink-0">
+                                        <Check className="h-5 w-5 text-green-400" />
+                                    </div>
+                                    <div className="ml-3">
+                                        <h3 className="text-sm font-medium text-green-800">Email enviado</h3>
+                                        <div className="mt-2 text-sm text-green-700">
+                                            <p>Verifique sua caixa de entrada para redefinir sua senha.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -150,7 +192,6 @@ const Login = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                // Button is now Red
                                 className="group w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                                 {isLoading ? (
@@ -172,12 +213,16 @@ const Login = () => {
                             </div>
                             <div className="relative flex justify-center text-sm">
                                 <span className="px-2 bg-white text-gray-500">
-                                    Não tem acesso?
+                                    Precisa de ajuda?
                                 </span>
                             </div>
                         </div>
                         <div className="mt-6 flex justify-center text-sm">
-                            <a href="#" className="font-medium text-red-600 hover:text-red-500">
+                            <a
+                                href="mailto:suporte@janastore.com.br"
+                                className="flex items-center font-medium text-red-600 hover:text-red-500 transition-colors"
+                            >
+                                <Mail className="w-4 h-4 mr-2" />
                                 Contate o suporte
                             </a>
                         </div>

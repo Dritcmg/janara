@@ -44,10 +44,17 @@ export const AuthProvider = ({ children }) => {
         if (error) throw error;
     };
 
+    const resetPassword = async (email) => {
+        const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+        return data;
+    };
+
     const value = {
         user,
         login,
         logout,
+        resetPassword,
         loading
     };
 
