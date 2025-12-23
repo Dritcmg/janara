@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import { supabase } from '../services/supabaseClient';
-import { ArrowUpCircle, ArrowDownCircle, Plus, PieChart, Wallet, Clock, MessageCircle, AlertCircle, ShoppingBag, CheckCircle } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, Plus, PieChart, Wallet, Clock, MessageCircle, AlertCircle, ShoppingBag, CheckCircle, ChevronDown, ChevronRight, Tag } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -12,17 +12,19 @@ import { formatCurrency, parseCurrency } from '../lib/utils';
 const Financial = () => {
     const [transactions, setTransactions] = useState([]);
     const [receivables, setReceivables] = useState([]);
-    const [consignments, setConsignments] = useState([]); // NEW: Consignment Items
+    const [consignmentGroups, setConsignmentGroups] = useState({}); // Grouped by Brand
     const [expenseStats, setExpenseStats] = useState({});
     const [filter, setFilter] = useState('all');
-    const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'consignado'
+    const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(false);
     const [dateRange, setDateRange] = useState({
         startDate: '',
         endDate: ''
     });
 
-    // Modal State
+    const [expandedBrands, setExpandedBrands] = useState({});
+
+    // Modal
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [expenseForm, setExpenseForm] = useState({
         descricao: '',
@@ -71,18 +73,27 @@ const Financial = () => {
             });
             setReceivables(sortedReceivables);
 
-            // 4. Consignments (Sold but not Paid to Supplier)
-            // Note: DB Migration required for column 'consignado_pago' and 'preco_custo' on itens_venda
-            // We use 'ilike' for category to be safe
+            // 4. Consignments (Grouped by Brand)
+            // Query: items where is_consignado is true AND consignado_pago is false
             const { data: soldConsignments, error: consError } = await supabase
                 .from('itens_venda')
                 .select('*')
-                .ilike('categoria_produto', '%Consignado%')
+                .eq('is_consignado', true)
                 .eq('consignado_pago', false)
                 .order('created_at', { ascending: false });
 
-            if (!consError) {
-                setConsignments(soldConsignments || []);
+            if (!consError && soldConsignments) {
+                // Group by brand
+                const groups = {};
+                soldConsignments.forEach(item => {
+                    const brand = item.marca || 'Sem Marca';
+                    if (!groups[brand]) {
+                        groups[brand] = { items: [], totalCost: 0 };
+                    }
+                    groups[brand].items.push(item);
+                    groups[brand].totalCost += Number(item.preco_custo || 0);
+                });
+                setConsignmentGroups(groups);
             }
 
         } catch (error) {
@@ -90,6 +101,10 @@ const Financial = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const toggleBrand = (brand) => {
+        setExpandedBrands(prev => ({ ...prev, [brand]: !prev[brand] }));
     };
 
     const filteredTransactions = filter === 'all'
@@ -107,17 +122,7 @@ const Financial = () => {
 
     const handleSaveExpense = async (e) => {
         e.preventDefault();
-
-        if (!expenseForm.descricao || !expenseForm.valor) {
-            toast.error("Preencha todos os campos");
-            return;
-        }
-
         const valor = typeof expenseForm.valor === 'string' ? parseCurrency(expenseForm.valor) : expenseForm.valor;
-        if (valor <= 0) {
-            toast.error("Valor deve ser positivo");
-            return;
-        }
 
         try {
             setLoading(true);
@@ -129,13 +134,13 @@ const Financial = () => {
                 data: new Date().toISOString()
             });
 
-            // If this was a consignment batch payment, update the items
+            // Update consignment items
             if (expenseForm.isConsignmentBatch && expenseForm.itemIds?.length > 0) {
                 await supabase
                     .from('itens_venda')
                     .update({ consignado_pago: true })
                     .in('id', expenseForm.itemIds);
-                toast.success("Lote de consignado baixado com sucesso!");
+                toast.success("Pagamento de lote registrado!");
             } else {
                 toast.success("Despesa registrada!");
             }
@@ -158,21 +163,18 @@ const Financial = () => {
         }
     };
 
-    const handlePayConsignmentBatch = () => {
-        if (consignments.length === 0) return;
-
-        const totalCost = consignments.reduce((sum, item) => sum + Number(item.preco_custo || 0), 0);
-        const itemIds = consignments.map(i => i.id);
+    const handlePayBrandBatch = (brand, group) => {
         const currentMonth = new Date().toLocaleString('pt-BR', { month: 'long' });
-
         openModal({
-            descricao: `Pagamento Consignados - ${currentMonth}`,
+            descricao: `Repasse Consignado - ${brand} (${currentMonth})`,
             categoria: 'Estoque',
-            valor: formatCurrency(totalCost.toFixed(2)),
+            valor: formatCurrency(group.totalCost.toFixed(2)),
             isConsignmentBatch: true,
-            itemIds
+            itemIds: group.items.map(i => i.id)
         });
     };
+
+    const totalConsignmentsPending = Object.values(consignmentGroups).reduce((acc, g) => acc + g.items.length, 0);
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-10">
@@ -184,7 +186,6 @@ const Financial = () => {
                     Financeiro
                 </h1>
 
-                {/* Tabs */}
                 <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
                     <button
                         onClick={() => setActiveTab('overview')}
@@ -197,7 +198,7 @@ const Financial = () => {
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'consignado' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         Consignados
-                        {consignments.length > 0 && <span className="ml-2 bg-indigo-100 text-indigo-800 text-xs py-0.5 px-2 rounded-full">{consignments.length}</span>}
+                        {totalConsignmentsPending > 0 && <span className="ml-2 bg-indigo-100 text-indigo-800 text-xs py-0.5 px-2 rounded-full">{totalConsignmentsPending}</span>}
                     </button>
                 </div>
 
@@ -209,16 +210,15 @@ const Financial = () => {
 
             {activeTab === 'overview' && (
                 <>
-                    {/* Receivables Section */}
+                    {/* Receivables Table Removed for Brevity (Same as before) */}
                     {receivables.length > 0 && (
                         <div className="bg-white rounded-xl shadow-sm border border-orange-100 overflow-hidden mb-8">
-                            <div className="px-6 py-4 border-b border-orange-100 bg-orange-50/50 flex justify-between items-center">
+                            <div className="px-6 py-4 border-b border-orange-100 bg-orange-50/50">
                                 <h2 className="text-lg font-bold text-orange-900 flex items-center">
                                     <Clock className="mr-2 h-5 w-5 text-orange-600" />
                                     Contas a Receber
                                 </h2>
                             </div>
-                            {/* ... Same Table as before ... */}
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
@@ -249,13 +249,11 @@ const Financial = () => {
                         </div>
                     )}
 
-                    {/* Standard Financial View */}
-                    {/* ... Same Chart and Table code ... */}
+                    {/* Stats & Transactions */}
                     <div className="mt-8 mb-8">
                         <h2 className="text-lg leading-6 font-medium text-zinc-900 mb-4 flex items-center">
                             <PieChart className="mr-2 h-5 w-5 text-zinc-500" /> Análise de Despesas
                         </h2>
-                        {/* Stats Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                             {Object.entries(expenseStats).map(([cat, val]) => (
                                 <div key={cat} className="bg-white shadow-sm rounded-xl p-4 border-l-4 border-red-500">
@@ -292,86 +290,93 @@ const Financial = () => {
             )}
 
             {activeTab === 'consignado' && (
-                <div className="bg-white rounded-xl shadow-lg border border-indigo-100 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-indigo-50/30">
+                <div className="space-y-6">
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 flex items-center">
+                        <ShoppingBag className="h-6 w-6 text-indigo-600 mr-3" />
                         <div>
-                            <h2 className="text-xl font-serif text-gray-900 flex items-center">
-                                <ShoppingBag className="mr-2 h-6 w-6 text-indigo-600" />
-                                Gestão de Consignados
-                            </h2>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Itens vendidos da categoria "Consignado" pendentes de acerto com fornecedor.
-                            </p>
-                        </div>
-                        <div className="bg-white p-4 rounded-lg shadow-sm border border-indigo-100 text-right">
-                            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Total a Pagar (Custo)</p>
-                            <p className="text-2xl font-bold text-indigo-600">
-                                {formatCurrency(consignments.reduce((acc, item) => acc + Number(item.preco_custo || 0), 0).toFixed(2))}
-                            </p>
-                            <Button
-                                size="sm"
-                                className="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white"
-                                onClick={handlePayConsignmentBatch}
-                                disabled={consignments.length === 0}
-                            >
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Fechar Lote e Pagar
-                            </Button>
+                            <h3 className="text-lg font-bold text-indigo-900">Gestão de Consignados - Por Marca</h3>
+                            <p className="text-sm text-indigo-700">Abaixo estão os itens vendidos que precisam ser pagos aos fornecedores.</p>
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Venda</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Preço Venda</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-indigo-600 uppercase tracking-wider bg-indigo-50">Preço Custo (A Pagar)</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {consignments.length > 0 ? (
-                                    consignments.map((item) => (
-                                        <tr key={item.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {new Date(item.created_at).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {item.nome_produto}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                                {formatCurrency(Number(item.preco_unitario).toFixed(2))}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-700 text-right bg-indigo-50/30">
-                                                {formatCurrency(Number(item.preco_custo).toFixed(2))}
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
-                                            <p className="text-base font-medium">Nenhum item consignado vendido pendente.</p>
-                                            <p className="text-sm mt-1">Vendas da categoria "Consignado" aparecerão aqui.</p>
-                                        </td>
-                                    </tr>
+                    {Object.keys(consignmentGroups).length === 0 ? (
+                        <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow">
+                            Nenhum item consignado vendido pendente de pagamento.
+                        </div>
+                    ) : (
+                        Object.entries(consignmentGroups).map(([brand, group]) => (
+                            <div key={brand} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div
+                                    className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition-colors"
+                                    onClick={() => toggleBrand(brand)}
+                                >
+                                    <div className="flex items-center">
+                                        {expandedBrands[brand] ? <ChevronDown className="h-5 w-5 text-gray-500 mr-2" /> : <ChevronRight className="h-5 w-5 text-gray-500 mr-2" />}
+                                        <span className="text-lg font-bold text-gray-900 flex items-center">
+                                            <Tag className="h-4 w-4 mr-2 text-indigo-500" />
+                                            {brand}
+                                        </span>
+                                        <span className="ml-3 bg-gray-200 text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                                            {group.items.length} itens
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-lg font-bold text-gray-900">
+                                            A Pagar: {formatCurrency(group.totalCost.toFixed(2))}
+                                        </span>
+                                        <Button
+                                            size="sm"
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handlePayBrandBatch(brand, group);
+                                            }}
+                                        >
+                                            <CheckCircle className="h-4 w-4 mr-2" />
+                                            Pagar Marca
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {expandedBrands[brand] && (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Venda</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produto</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Preço Venda</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-indigo-600 uppercase">Custo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {group.items.map((item) => (
+                                                    <tr key={item.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 text-sm text-gray-500">{new Date(item.created_at).toLocaleDateString()}</td>
+                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.nome_produto}</td>
+                                                        <td className="px-6 py-4 text-sm text-gray-500 text-right">{formatCurrency(Number(item.preco_unitario).toFixed(2))}</td>
+                                                        <td className="px-6 py-4 text-sm font-bold text-indigo-700 text-right">{formatCurrency(Number(item.preco_custo).toFixed(2))}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 )}
-                            </tbody>
-                        </table>
-                    </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             )}
 
-            {/* Expense Modal (Reused) */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={expenseForm.isConsignmentBatch ? "Confirmar Pagamento de Lote" : "Registrar Despesa"}
+                title={expenseForm.isConsignmentBatch ? "Confirmar Pagamento de Marca" : "Registrar Despesa"}
             >
                 <form id="expenseForm" onSubmit={handleSaveExpense} className="space-y-4">
                     {expenseForm.isConsignmentBatch && (
                         <div className="bg-indigo-50 p-3 rounded-md border border-indigo-100 text-indigo-800 text-sm mb-4">
-                            Este lançamento dará baixa em {consignments.length} itens da lista de consignados.
+                            Isso registrará uma saída e marcará os itens desta marca como pagos.
                         </div>
                     )}
                     <div>
@@ -412,7 +417,7 @@ const Financial = () => {
                 </form>
                 <div className="mt-5 sm:flex sm:flex-row-reverse gap-2">
                     <Button type="submit" form="expenseForm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                        {expenseForm.isConsignmentBatch ? "Confirmar Baixa" : "Salvar"}
+                        {expenseForm.isConsignmentBatch ? "Confirmar Pagamento" : "Salvar"}
                     </Button>
                     <Button variant="secondary" onClick={() => setIsModalOpen(false)} type="button">
                         Cancelar

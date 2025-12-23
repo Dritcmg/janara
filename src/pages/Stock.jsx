@@ -29,7 +29,9 @@ const Stock = () => {
         preco_venda: '',
         qtd: '',
         estoque_minimo: 5,
-        imagem: ''
+        imagem: '',
+        is_consignado: false,
+        marca: ''
     });
 
     // Pagination State
@@ -75,41 +77,7 @@ const openModal = (product = null) => {
     if (product) {
         setEditingProduct(product);
         setFormData({
-            ...product,
-            nome: product.nome || '',
-            categoria: product.categoria || '',
-            cor: product.cor || '',
-            imagem: product.imagem || '',
-            tamanho: product.tamanho || 'M',
-            qtd: product.qtd || 0,
-            estoque_minimo: product.estoque_minimo || 5,
-            custo: formatCurrency(Number(product.custo || 0).toFixed(2)),
-            preco_venda: formatCurrency(Number(product.preco_venda || 0).toFixed(2)),
-        });
-    } else {
-        setEditingProduct(null);
-        setFormData({
-            nome: '',
-            categoria: '', // User can type "Consignado" easily now
-            tamanho: 'M',
-            cor: '',
-            custo: '',
-            preco_venda: '',
-            qtd: '',
-            estoque_minimo: 5,
-            imagem: ''
-        });
-        setSelectedFile(null);
-        setPreviewUrl('');
-    }
-    setIsModalOpen(true);
-};
-
-const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        setSelectedFile(file);
-        setPreviewUrl(URL.createObjectURL(file));
+            setPreviewUrl(URL.createObjectURL(file));
     }
 };
 
@@ -376,9 +344,38 @@ return (
                             <Input type="number" label="Estoque Mín." name="estoque_minimo" value={formData.estoque_minimo} onChange={handleChange} />
                         </div>
                     </div>
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div className="flex items-center mb-3">
+                            <input
+                                id="is_consignado"
+                                type="checkbox"
+                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                checked={formData.is_consignado}
+                                onChange={(e) => setFormData(prev => ({ ...prev, is_consignado: e.target.checked }))}
+                            />
+                            <label htmlFor="is_consignado" className="ml-2 block text-sm font-medium text-gray-900">
+                                Produto Consignado?
+                            </label>
+                        </div>
+
+                        {formData.is_consignado && (
+                            <div className="animate-fade-in">
+                                <Input
+                                    label="Marca / Fornecedor"
+                                    name="marca"
+                                    value={formData.marca}
+                                    onChange={handleChange}
+                                    placeholder="Ex: Marca XYZ"
+                                    required={formData.is_consignado}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">O valor de custo deste item será adicionado à lista de pagamentos desta marca.</p>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Input label="Preço Custo" name="custo" value={formData.custo} onChange={handleChange} required />
+                            <Input label="Preço Custo (A Pagar)" name="custo" value={formData.custo} onChange={handleChange} required />
                         </div>
                         <div>
                             <Input label="Preço Venda" name="preco_venda" value={formData.preco_venda} onChange={handleChange} required />
