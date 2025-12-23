@@ -8,9 +8,9 @@ const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'PDV', href: '/sales', icon: ShoppingCart }, // Shortened for mobile
     { name: 'Estoque', href: '/stock', icon: Box },
+    { name: 'Clientes', href: '/clients', icon: Users },
     { name: 'Financeiro', href: '/financial', icon: DollarSign },
     { name: 'Relatórios', href: '/reports', icon: FileText },
-    // Clients moved to 'More' menu or kept if space permits. Let's keep 5 items max for bottom bar usually.
 ];
 
 const MainLayout = () => {
