@@ -23,13 +23,13 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8" style={{ backgroundColor: '#fff1f2' }}>
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="mx-auto h-12 w-12 bg-indigo-600 rounded-xl flex items-center justify-center">
-                    <Lock className="h-8 w-8 text-white" />
+                <div className="mx-auto h-24 w-auto flex items-center justify-center">
+                    <img src="/logo.jpg" alt="Jana Store" className="h-24 w-auto rounded-full object-cover" />
                 </div>
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                    ModaControl
+                    Jana Store
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
                     Faça login para acessar o sistema
