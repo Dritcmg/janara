@@ -14,6 +14,10 @@ const Financial = () => {
     const [expenseStats, setExpenseStats] = useState({});
     const [filter, setFilter] = useState('all'); // all, entrada, saida
     const [loading, setLoading] = useState(false);
+    const [dateRange, setDateRange] = useState({
+        startDate: '',
+        endDate: ''
+    });
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,12 +29,12 @@ const Financial = () => {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [dateRange]);
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const data = await db.financial.list();
+            const data = await db.financial.list(dateRange);
             setTransactions(data);
             const stats = await db.financial.getByCategory();
             setExpenseStats(stats);
@@ -126,16 +130,44 @@ const Financial = () => {
                 </div>
             </div>
 
-            <div className="mt-4 flex space-x-2">
-                <Button variant={filter === 'all' ? 'primary' : 'outline'} size="sm" onClick={() => setFilter('all')}>
-                    Todas
-                </Button>
-                <Button variant={filter === 'entrada' ? 'primary' : 'outline'} size="sm" onClick={() => setFilter('entrada')} className={filter === 'entrada' ? 'bg-green-600 hover:bg-green-700 border-transparent' : 'text-green-600 border-green-200 hover:bg-green-50'}>
-                    Entradas
-                </Button>
-                <Button variant={filter === 'saida' ? 'primary' : 'outline'} size="sm" onClick={() => setFilter('saida')} className={filter === 'saida' ? 'bg-red-600 hover:bg-red-700 border-transparent' : 'text-red-600 border-red-200 hover:bg-red-50'}>
-                    Saídas
-                </Button>
+            <div className="mt-4 flex flex-col md:flex-row justify-between items-center bg-gray-50 p-3 rounded-lg gap-4">
+                <div className="flex space-x-2">
+                    <Button variant={filter === 'all' ? 'primary' : 'outline'} size="sm" onClick={() => setFilter('all')}>
+                        Todas
+                    </Button>
+                    <Button variant={filter === 'entrada' ? 'primary' : 'outline'} size="sm" onClick={() => setFilter('entrada')} className={filter === 'entrada' ? 'bg-green-600 hover:bg-green-700 border-transparent' : 'text-green-600 border-green-200 hover:bg-green-50'}>
+                        Entradas
+                    </Button>
+                    <Button variant={filter === 'saida' ? 'primary' : 'outline'} size="sm" onClick={() => setFilter('saida')} className={filter === 'saida' ? 'bg-red-600 hover:bg-red-700 border-transparent' : 'text-red-600 border-red-200 hover:bg-red-50'}>
+                        Saídas
+                    </Button>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+                    <span className="text-sm text-gray-500 whitespace-nowrap">Período:</span>
+                    <Input
+                        type="date"
+                        value={dateRange.startDate}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                        className="w-full sm:w-auto text-sm py-1.5"
+                    />
+                    <span className="text-sm text-gray-400 hidden sm:inline">até</span>
+                    <Input
+                        type="date"
+                        value={dateRange.endDate}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                        className="w-full sm:w-auto text-sm py-1.5"
+                    />
+                    {(dateRange.startDate || dateRange.endDate) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDateRange({ startDate: '', endDate: '' })}
+                            className="text-gray-500 hover:text-gray-700 text-xs"
+                        >
+                            Limpar
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div className="mt-6 flex flex-col">

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/db';
-import { Plus, Search, Edit, Trash, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash, X, Upload, Image as ImageIcon } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -16,6 +16,8 @@ const Stock = () => {
     const [editingProduct, setEditingProduct] = useState(null);
     const [productToDelete, setProductToDelete] = useState(null); // For delete confirmation
     const [loading, setLoading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
 
     // Form State
     const [formData, setFormData] = useState({
@@ -95,8 +97,18 @@ const Stock = () => {
                 estoque_minimo: 5,
                 imagem: ''
             });
+            setSelectedFile(null);
+            setPreviewUrl('');
         }
         setIsModalOpen(true);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
     };
 
     const closeModal = () => {
@@ -122,12 +134,19 @@ const Stock = () => {
             estoque_minimo: parseInt(formData.estoque_minimo, 10) || 0
         };
 
-        // Always remove id and created_at to avoid issues with Supabase update/insert
-        delete dataToSave.id;
-        delete dataToSave.created_at;
-
         try {
             setLoading(true);
+
+            // Upload Image if selected
+            if (selectedFile) {
+                const publicUrl = await db.products.uploadImage(selectedFile);
+                dataToSave.imagem = publicUrl;
+            }
+
+            // Always remove id and created_at to avoid issues with Supabase update/insert
+            delete dataToSave.id;
+            delete dataToSave.created_at;
+
             if (editingProduct) {
                 await db.products.update(editingProduct.id, dataToSave);
                 toast.success("Produto atualizado com sucesso!");
@@ -286,7 +305,42 @@ const Stock = () => {
                             <Input label="Nome do Produto" name="nome" value={formData.nome} onChange={handleChange} required />
                         </div>
                         <div>
-                            <Input label="URL da Imagem" name="imagem" value={formData.imagem} onChange={handleChange} placeholder="https://..." />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Imagem do Produto</label>
+                            <div className="flex items-center space-x-4">
+                                <div className="h-20 w-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50 relative group">
+                                    {(previewUrl || formData.imagem) ? (
+                                        <img
+                                            src={previewUrl || formData.imagem}
+                                            alt="Preview"
+                                            className="h-full w-full object-cover"
+                                        />
+                                    ) : (
+                                        <ImageIcon className="h-8 w-8 text-gray-400" />
+                                    )}
+                                    <input
+                                        type="file"
+                                        id="fileInput"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleFileChange}
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white" onClick={() => document.getElementById('fileInput').click()}>
+                                        <Edit className="h-5 w-5" />
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => document.getElementById('fileInput').click()}
+                                    >
+                                        <Upload className="h-4 w-4 mr-2" />
+                                        Escolher Foto
+                                    </Button>
+                                    <p className="mt-1 text-xs text-gray-500">JPG, PNG ou WebP até 2MB.</p>
+                                </div>
+                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>

@@ -90,6 +90,20 @@ export const db = {
       const newQty = Math.max(0, product.qtd - quantity);
       const { error: updateError } = await supabase.from('produtos').update({ qtd: newQty }).eq('id', id);
       if (updateError) throw updateError;
+    },
+    uploadImage: async (file) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('produtos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('produtos').getPublicUrl(filePath);
+      return data.publicUrl;
     }
   },
 
@@ -114,8 +128,20 @@ export const db = {
 
   // FINANCIAL
   financial: {
-    list: async () => {
-      const { data, error } = await supabase.from('financeiro').select('*').order('data', { ascending: false });
+    list: async (params = {}) => {
+      let query = supabase.from('financeiro').select('*').order('data', { ascending: false });
+
+      if (params.startDate) {
+        query = query.gte('data', params.startDate);
+      }
+      if (params.endDate) {
+        // Adjust end date to cover the entire day (23:59:59)
+        const end = new Date(params.endDate);
+        end.setHours(23, 59, 59, 999);
+        query = query.lte('data', end.toISOString());
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
