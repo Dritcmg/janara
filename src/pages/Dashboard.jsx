@@ -121,71 +121,83 @@ const Dashboard = () => {
             {/* Analytics Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 {/* Sales Last 7 Days */}
-                <div className="bg-white p-6 rounded-lg shadow">
+                <div className="bg-white p-6 rounded-lg shadow col-span-1 min-w-[300px]">
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                         <TrendingUp className="h-5 w-5 mr-2 text-indigo-500" /> Vendas - Últimos 7 Dias
                     </h3>
                     <div className="h-72 w-full" style={{ minHeight: '300px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={salesSevenDays}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
-                                <Tooltip formatter={(value) => [`R$ ${value.toFixed(2)}`, 'Vendas']} cursor={{ fill: '#EEF2FF' }} />
-                                <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={40} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {salesSevenDays.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={salesSevenDays}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
+                                    <Tooltip formatter={(value) => [`R$ ${value.toFixed(2)}`, 'Vendas']} cursor={{ fill: '#EEF2FF' }} />
+                                    <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={40} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-gray-400">Sem dados recentes</div>
+                        )}
                     </div>
                 </div>
 
                 {/* Sales By Payment Method (Pie) */}
-                <div className="bg-white p-6 rounded-lg shadow">
+                <div className="bg-white p-6 rounded-lg shadow col-span-1 min-w-[300px]">
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                         <PieIcon className="h-5 w-5 mr-2 text-indigo-500" /> Métodos de Pagamento
                     </h3>
                     <div className="h-72 w-full" style={{ minHeight: '300px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={salesByMethod}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={100}
-                                    fill="#8884d8"
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {salesByMethod.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(value) => `R$ ${value.toFixed(2)}`} />
-                                <Legend verticalAlign="bottom" height={36} />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        {salesByMethod.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={salesByMethod}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={100}
+                                        fill="#8884d8"
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {salesByMethod.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(value) => `R$ ${value.toFixed(2)}`} />
+                                    <Legend verticalAlign="bottom" height={36} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-gray-400">Sem dados</div>
+                        )}
                     </div>
                 </div>
 
                 {/* Sales By Category (Bar - Horizontal or Vertical) */}
-                <div className="bg-white p-6 rounded-lg shadow lg:col-span-2">
+                <div className="bg-white p-6 rounded-lg shadow lg:col-span-2 min-w-[300px]">
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                         <PieIcon className="h-5 w-5 mr-2 text-indigo-500" /> Vendas por Categoria (Quantidade)
                     </h3>
                     <div className="h-64 w-full" style={{ minHeight: '256px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={salesByCategory} >
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip cursor={{ fill: '#EEF2FF' }} />
-                                <Bar dataKey="value" fill="#8884d8" name="Qtd Vendida" radius={[4, 4, 0, 0]} barSize={50}>
-                                    {salesByCategory.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {salesByCategory.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={salesByCategory} >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                                    <Tooltip cursor={{ fill: '#EEF2FF' }} />
+                                    <Bar dataKey="value" fill="#8884d8" name="Qtd Vendida" radius={[4, 4, 0, 0]} barSize={50}>
+                                        {salesByCategory.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-gray-400">Sem dados</div>
+                        )}
                     </div>
                 </div>
             </div>

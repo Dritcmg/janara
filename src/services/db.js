@@ -106,7 +106,14 @@ export const db = {
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage.from('produtos').getPublicUrl(filePath);
-      return data.publicUrl;
+
+      // FIX: Ensure 'public' is in the URL if missing (Supabase SDK edge case)
+      let finalUrl = data.publicUrl;
+      if (finalUrl && !finalUrl.includes('/object/public/') && finalUrl.includes('/object/')) {
+        finalUrl = finalUrl.replace('/object/', '/object/public/');
+      }
+
+      return finalUrl;
     }
   },
 
