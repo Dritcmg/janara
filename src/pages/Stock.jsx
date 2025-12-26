@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import { Plus, Search, Edit, Trash, X, Upload, Image as ImageIcon } from 'lucide-react';
@@ -146,6 +145,11 @@ const Stock = () => {
 
             // Upload Image if selected
             if (selectedFile) {
+                // Delete old image if updating and it exists
+                if (editingProduct && editingProduct.imagem) {
+                    await db.products.deleteImage(editingProduct.imagem);
+                }
+
                 const publicUrl = await db.products.uploadImage(selectedFile);
                 dataToSave.imagem = publicUrl;
             }
@@ -420,8 +424,8 @@ const Stock = () => {
                         </div>
                     </form>
                     <div className="mt-5 sm:flex sm:flex-row-reverse gap-2">
-                        <Button type="submit" form="productForm">Salvar</Button>
-                        <Button variant="secondary" onClick={closeModal} type="button">Cancelar</Button>
+                        <Button type="submit" form="productForm" disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</Button>
+                        <Button variant="secondary" onClick={closeModal} type="button" disabled={loading}>Cancelar</Button>
                     </div>
                 </Modal>
             )}

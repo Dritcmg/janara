@@ -114,6 +114,20 @@ export const db = {
       }
 
       return finalUrl;
+    },
+    deleteImage: async (url) => {
+      if (!url) return;
+      try {
+        // Extract filename from URL
+        // Format usually: .../produtos/filename.ext or .../produtos/public/filename.ext
+        const parts = url.split('/');
+        const fileName = parts[parts.length - 1];
+        if (!fileName) return;
+
+        await supabase.storage.from('produtos').remove([fileName]);
+      } catch (error) {
+        console.error("Error deleting image:", error);
+      }
     }
   },
 
